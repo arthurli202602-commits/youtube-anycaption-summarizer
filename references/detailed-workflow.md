@@ -8,12 +8,24 @@ For a fresh macOS setup, install and verify the default dependency stack with:
 
 ```bash
 brew install yt-dlp ffmpeg whisper-cpp
-mkdir -p ~/.openclaw/workspace
-curl -L https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin \
-  -o ~/.openclaw/workspace/ggml-medium.bin
+MODELS_DIR="$HOME/.openclaw/workspace"
+MODEL_PATH="$MODELS_DIR/ggml-medium.bin"
+mkdir -p "$MODELS_DIR"
+if [ ! -f "$MODEL_PATH" ]; then
+  curl -L https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin \
+    -o "$MODEL_PATH.part" && mv "$MODEL_PATH.part" "$MODEL_PATH"
+else
+  echo "Model already exists at $MODEL_PATH — leaving it unchanged."
+fi
 command -v python3 yt-dlp ffmpeg whisper-cli
-ls -lh ~/.openclaw/workspace/ggml-medium.bin
+ls -lh "$MODEL_PATH"
 ```
+
+This setup flow:
+- does not overwrite the workspace directory itself
+- does not edit `~/.openclaw/openclaw.json` or other OpenClaw config files
+- does not overwrite `ggml-medium.bin` if it already exists
+- only creates the model file when it is missing
 
 Default assumptions used by the skill after that:
 - `python3`, `yt-dlp`, `ffmpeg`, and `whisper-cli` are on `PATH`

@@ -39,17 +39,25 @@ For a fresh macOS setup, new users should be able to copy-paste the following ex
 
 ```bash
 brew install yt-dlp ffmpeg whisper-cpp
-mkdir -p ~/.openclaw/workspace
-curl -L https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin \
-  -o ~/.openclaw/workspace/ggml-medium.bin
+MODELS_DIR="$HOME/.openclaw/workspace"
+MODEL_PATH="$MODELS_DIR/ggml-medium.bin"
+mkdir -p "$MODELS_DIR"
+if [ ! -f "$MODEL_PATH" ]; then
+  curl -L https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin \
+    -o "$MODEL_PATH.part" && mv "$MODEL_PATH.part" "$MODEL_PATH"
+else
+  echo "Model already exists at $MODEL_PATH — leaving it unchanged."
+fi
 command -v python3 yt-dlp ffmpeg whisper-cli
-ls -lh ~/.openclaw/workspace/ggml-medium.bin
+ls -lh "$MODEL_PATH"
 ```
 
 What this does:
 - installs `yt-dlp`, `ffmpeg`, and `whisper-cli`
-- creates the default models directory used by this skill: `~/.openclaw/workspace`
-- downloads the default Whisper model file expected by the skill: `ggml-medium.bin`
+- creates the default models directory used by this skill if it does not already exist: `~/.openclaw/workspace`
+- downloads the default Whisper model file only if it is missing
+- avoids touching `~/.openclaw/openclaw.json` or any other OpenClaw config file
+- does not delete, replace, or overwrite other files in your existing workspace folder
 - verifies that the required binaries and model file are present
 
 If you want to store models elsewhere, pass `--models-dir /path/to/models` when running the workflow.
