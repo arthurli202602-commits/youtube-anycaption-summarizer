@@ -35,13 +35,24 @@ This skill is self-contained. It does not require any other YouTube summarizer s
 
 ## Install dependencies
 
+For a fresh macOS setup, new users should be able to copy-paste the following exactly:
+
 ```bash
 brew install yt-dlp ffmpeg whisper-cpp
+mkdir -p ~/.openclaw/workspace
+curl -L https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin \
+  -o ~/.openclaw/workspace/ggml-medium.bin
+command -v python3 yt-dlp ffmpeg whisper-cli
+ls -lh ~/.openclaw/workspace/ggml-medium.bin
 ```
 
-Notes:
-- make sure `whisper-cli` is available on `PATH`
-- keep a supported ggml Whisper model file available in the configured models directory
+What this does:
+- installs `yt-dlp`, `ffmpeg`, and `whisper-cli`
+- creates the default models directory used by this skill: `~/.openclaw/workspace`
+- downloads the default Whisper model file expected by the skill: `ggml-medium.bin`
+- verifies that the required binaries and model file are present
+
+If you want to store models elsewhere, pass `--models-dir /path/to/models` when running the workflow.
 
 ## Example requests
 

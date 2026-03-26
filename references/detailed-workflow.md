@@ -2,6 +2,27 @@
 
 Use this reference when you need the full end-to-end operational contract for the skill, especially for batch runs, post-processing, or implementation/debugging work.
 
+## Dependency setup for new users
+
+For a fresh macOS setup, install and verify the default dependency stack with:
+
+```bash
+brew install yt-dlp ffmpeg whisper-cpp
+mkdir -p ~/.openclaw/workspace
+curl -L https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.bin \
+  -o ~/.openclaw/workspace/ggml-medium.bin
+command -v python3 yt-dlp ffmpeg whisper-cli
+ls -lh ~/.openclaw/workspace/ggml-medium.bin
+```
+
+Default assumptions used by the skill after that:
+- `python3`, `yt-dlp`, `ffmpeg`, and `whisper-cli` are on `PATH`
+- the default model is `ggml-medium`
+- the default models directory is `~/.openclaw/workspace`
+- the default model file path is `~/.openclaw/workspace/ggml-medium.bin`
+
+If you store model files elsewhere, use `--models-dir /path/to/models`.
+
 ## 1. Collect inputs
 
 Accept either:
