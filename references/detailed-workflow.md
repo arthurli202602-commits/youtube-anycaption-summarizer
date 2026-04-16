@@ -41,6 +41,11 @@ Accept either:
 - one YouTube URL, or
 - `--batch-file` with one YouTube URL per line
 
+Invocation rule:
+- if there is exactly one URL, run `scripts/run_youtube_workflow.py <url>`
+- if there is more than one URL, first create a batch file, then run the batch script with `--batch-file`
+- do not pass multiple positional URLs directly to `scripts/run_youtube_batch_end_to_end.py`
+
 Optional flags:
 - `--parent`
 - `--model`
@@ -248,6 +253,7 @@ If the workflow script succeeded but the summary/finalization step did not happe
 ## Batch / queue mode guidance
 
 Batch mode processes URLs sequentially.
+When handling more than one URL, create a plain-text batch file first and invoke the batch orchestrator with `--batch-file`.
 For each item it will:
 - fetch metadata
 - try subtitles first

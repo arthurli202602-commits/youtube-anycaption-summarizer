@@ -2,11 +2,19 @@
 
 Use a plain text file with one YouTube URL per line.
 
+This is the required input format for multi-video runs. If you have more than one URL, create this batch file first, then invoke the batch runner with `--batch-file`. Do not pass multiple positional URLs directly to `run_youtube_batch_end_to_end.py`.
+
 Example:
 
 ```text
 https://www.youtube.com/watch?v=RX-fQTW2To8
 https://www.youtube.com/watch?v=657wlbtrzG8
+```
+
+Canonical invocation:
+
+```bash
+python3 scripts/run_youtube_batch_end_to_end.py --batch-file ./youtube-urls.txt
 ```
 
 ## Rules

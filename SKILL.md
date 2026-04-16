@@ -111,6 +111,25 @@ python3 scripts/run_youtube_workflow.py "https://www.youtube.com/watch?v=VIDEO_I
 
 See `references/batch-input-format.md`.
 
+Safe invocation rule for batch mode:
+- if you have exactly one URL, use `run_youtube_workflow.py <url>`
+- if you have more than one URL, first create a plain-text batch file with one URL per line, then pass only `--batch-file` to the batch runner
+- do not pass multiple positional URLs directly to `run_youtube_batch_end_to_end.py`
+
+Recommended end-to-end batch mode:
+
+```bash
+cat > ./youtube-urls.txt <<'EOF'
+https://www.youtube.com/watch?v=VIDEO_ID_1
+https://www.youtube.com/watch?v=VIDEO_ID_2
+EOF
+python3 scripts/run_youtube_batch_end_to_end.py --batch-file ./youtube-urls.txt
+```
+
+When launched from an OpenClaw session, the batch orchestrator can now post best-effort milestone updates back into that same launching session automatically. It only forwards high-signal events like started, summary ready, failed, and batch complete.
+
+Low-level extraction-only batch mode still exists:
+
 ```bash
 python3 scripts/run_youtube_workflow.py --batch-file ./youtube-urls.txt
 ```
@@ -123,6 +142,8 @@ This skill is designed to keep working across the messy reality of YouTube:
 - if it has **no usable subtitles at all**, fall back to **local Whisper transcription**
 
 That makes it materially more reliable than caption-only workflows. It works well for caption-rich videos, caption-poor videos, and private/internal uploads where subtitle coverage is inconsistent.
+
+For multi-video requests, prefer the end-to-end batch orchestrator so each video is processed to completion when possible, failures do not block the whole batch, failed items are retried up to 3 times, and the final batch result includes both successful outputs and failed-video reasons. For stability, multi-video requests should always be converted into a batch file first and then run via `run_youtube_batch_end_to_end.py --batch-file ...`.
 
 Core capabilities:
 - fetch YouTube metadata first and derive safe output paths
@@ -155,6 +176,7 @@ The workflow also requires a supported Whisper ggml model file in the configured
 
 Use these scripts directly:
 - `scripts/run_youtube_workflow.py` — main deterministic workflow for metadata, download/subtitles, transcription, placeholder summary creation, cleanup, and workflow metadata emission
+- `scripts/run_youtube_batch_end_to_end.py` — recommended batch orchestrator for multiple URLs; processes videos sequentially to completion when possible, retries failed items up to 3 times, and returns final success/failure results including failed-video reasons and successful-item `end_to_end_total_seconds`
 - `scripts/backfill_detected_language.py` — update `transcript_raw.md`, `Summary.md`, and workflow metadata after the current session LLM decides the major transcript language
 - `scripts/complete_youtube_summary.py` — validate that `Summary.md` is no longer a placeholder, optionally backfill language, compute the final end-to-end timing report for one item, and emit a session-ready result block
 - `scripts/normalize_transcript_text.py` — convert raw timestamped transcript text into cleaner summary input without modifying the raw transcript file
@@ -205,6 +227,7 @@ Read these as needed:
 - `references/summary-template.md` before writing the final polished `Summary.md`
 - `references/session-output-template.md` before returning the final user-facing per-video result block
 - `references/batch-input-format.md` when handling `--batch-file`
+- `references/batch-end-to-end-behavior.md` when handling multi-video end-to-end completion with retry and final success/failure reporting
 
 ## Practical public promise
 

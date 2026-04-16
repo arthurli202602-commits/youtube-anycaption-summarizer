@@ -139,19 +139,36 @@ def merge_subtitle_segments(segments: List[Tuple[str, str, str]]) -> List[Tuple[
     return merged
 
 
-def run(cmd: List[str], *, check: bool = True, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, cwd=str(cwd) if cwd else None, text=True, capture_output=True, check=check)
+# Timeout defaults (seconds)
+DEFAULT_CMD_TIMEOUT = 300       # 5 min for most operations
+DEFAULT_LONG_TIMEOUT = 900      # 15 min for transcription / large downloads
 
 
-def run_with_retries(cmd: List[str], retries: int, backoff: float, *, cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
+def run(cmd: List[str], *, check: bool = True, cwd: Optional[Path] = None, timeout: Optional[int] = DEFAULT_CMD_TIMEOUT) -> subprocess.CompletedProcess:
+    try:
+        return subprocess.run(cmd, cwd=str(cwd) if cwd else None, text=True, capture_output=True, check=check, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"Command timed out after {timeout}s: {' '.join(cmd)}") from exc
+
+
+def run_with_retries(cmd: List[str], retries: int, backoff: float, *, cwd: Optional[Path] = None, timeout: Optional[int] = DEFAULT_LONG_TIMEOUT) -> subprocess.CompletedProcess:
     last_err = None
     for attempt in range(1, retries + 1):
-        result = run(cmd, check=False, cwd=cwd)
+        try:
+            result = run(cmd, check=False, cwd=cwd, timeout=timeout)
+        except RuntimeError as exc:
+            # timeout → treat as retriable
+            last_err = exc
+            if attempt < retries:
+                time.sleep(backoff * attempt)
+            continue
         if result.returncode == 0:
             return result
         last_err = result
         if attempt < retries:
             time.sleep(backoff * attempt)
+    if isinstance(last_err, RuntimeError):
+        raise last_err
     raise RuntimeError(f"Command failed after {retries} attempts: {' '.join(cmd)}\n{last_err.stderr or last_err.stdout}")
 
 
@@ -355,11 +372,12 @@ def download_media(url: str, output_prefix: Path, full_video: bool, args) -> Pat
 
 
 def convert_to_wav(source: Path, wav_path: Path) -> None:
-    run(["ffmpeg", "-y", "-i", str(source), "-ar", "16000", "-ac", "1", str(wav_path)])
+    run(["ffmpeg", "-y", "-i", str(source), "-ar", "16000", "-ac", "1", str(wav_path)], timeout=DEFAULT_LONG_TIMEOUT)
 
 
 def detect_language(model_path: Path, wav_path: Path) -> str:
-    result = run(["whisper-cli", "-m", str(model_path), "-f", str(wav_path), "-l", "auto", "-dl", "-np"], check=False)
+    # NOTE: do NOT use -np here — it suppresses the language detection output line
+    result = run(["whisper-cli", "-m", str(model_path), "-f", str(wav_path), "-l", "auto", "-dl"], check=False, timeout=DEFAULT_LONG_TIMEOUT)
     combined = "\n".join(part for part in (result.stdout, result.stderr) if part)
     for pattern in [r"auto[- ]detected language:\s*([A-Za-z-]+)", r"detected language:\s*([A-Za-z-]+)"]:
         match = re.search(pattern, combined, re.IGNORECASE)
@@ -369,7 +387,7 @@ def detect_language(model_path: Path, wav_path: Path) -> str:
 
 
 def transcribe(model_path: Path, wav_path: Path, language: str) -> str:
-    result = run(["whisper-cli", "-m", str(model_path), "-f", str(wav_path), "-l", language, "-np"])
+    result = run(["whisper-cli", "-m", str(model_path), "-f", str(wav_path), "-l", language, "-np"], timeout=DEFAULT_LONG_TIMEOUT)
     text = result.stdout.strip()
     if not text:
         raise RuntimeError("whisper-cli returned an empty transcript")
@@ -676,6 +694,7 @@ def main() -> int:
         print(json.dumps(results[0], ensure_ascii=False, indent=2))
     else:
         print(json.dumps({"queue_mode": True, "count": len(urls), "results": results, "failures": failures}, ensure_ascii=False, indent=2))
+    sys.stdout.flush()
     return 0
 
 
